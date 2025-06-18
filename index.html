@@ -1,48 +1,67 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <title>MindAR Markerless Simulado</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      canvas { width: 100%; height: 100% }
+    </style>
   </head>
   <body>
     <a-scene
-      mindar-image="imageTargetSrc: targets.mind"
+      mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false">
-
-      <a-assets></a-assets>
+      device-orientation-permission-ui="enabled: false"
+      embedded
+    >
+      <a-assets>
+        <a-asset-item id="model" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/softmind/scene.gltf"></a-asset-item>
+      </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-sphere
-          id="clickableSphere"
-          position="0 0 0"
-          radius="0.25"
-          color="#EF2D5E"
-          class="clickable">
-        </a-sphere>
+      <!-- Objeto anclado al marcador -->
+      <a-entity id="target" mindar-image-target="targetIndex: 0">
+        <a-sphere id="tracked-sphere" radius="0.15" color="#EF2D5E" position="0 0 0.1"></a-sphere>
       </a-entity>
+
+      <!-- Objeto clonado fuera del marcador -->
+      <a-sphere id="world-sphere" visible="false" radius="0.15" color="#4CC3D9"></a-sphere>
     </a-scene>
 
     <script>
-      AFRAME.registerComponent("change-color-on-click", {
+      AFRAME.registerComponent('detach-after-detection', {
         init: function () {
-          const el = this.el;
-          el.addEventListener("click", function () {
-            const randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
-            el.setAttribute("color", randomColor);
+          const sceneEl = this.el.sceneEl;
+          const target = document.querySelector('#target');
+          const trackedSphere = document.querySelector('#tracked-sphere');
+          const worldSphere = document.querySelector('#world-sphere');
+
+          // Cuando el marcador es detectado
+          target.addEventListener('targetFound', () => {
+            // Esperamos un momento para estabilizar
+            setTimeout(() => {
+              // Obtener la posición global del objeto anclado
+              const position = new THREE.Vector3();
+              trackedSphere.object3D.getWorldPosition(position);
+
+              // Mostrar el objeto fuera del marcador en la misma posición
+              worldSphere.setAttribute('position', position);
+              worldSphere.setAttribute('visible', true);
+
+              // Opcional: ocultar el objeto vinculado al marcador
+              trackedSphere.setAttribute('visible', false);
+            }, 1000); // espera 1s para asegurar que está bien posicionado
           });
         }
       });
 
-      document.addEventListener("DOMContentLoaded", () => {
-        const sphere = document.querySelector("#clickableSphere");
-        sphere.setAttribute("change-color-on-click", ""); // activa el componente
-      });
+      document.querySelector('a-scene').setAttribute('detach-after-detection', '');
     </script>
   </body>
 </html>
